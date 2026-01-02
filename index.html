@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Cat News Anchor Studio</title>
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#0b0f14;
+      --panel:#0f1620;
+      --border:#1f2a37;
+      --ink:#e6edf3;
+      --muted:#9fb0c0;
+
+      --yellow:#ffd400;
+      --red:#b61717;
+      --red2:#7a0f0f;
+      --black:#05070a;
+
+      --pad: clamp(12px, 3.5vw, 18px);
+      --gap: clamp(10px, 2.5vw, 14px);
+      --r: 14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      -webkit-text-size-adjust:100%;
+    }
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:var(--pad);
+      padding-bottom:calc(var(--pad) + env(safe-area-inset-bottom));
+      padding-top:calc(var(--pad) + env(safe-area-inset-top));
+    }
+    .top{
+      display:flex; gap:var(--gap); flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+      margin-bottom: 10px;
+    }
+    h1{font-size:clamp(20px,5vw,26px); margin:0}
+    .sub{color:var(--muted); font-size:13px; line-height:1.35}
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:var(--gap);
+    }
+    @media (max-width:900px){ .grid{grid-template-columns:1fr;} }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      padding:14px;
+    }
+
+    label{display:block; font-size:12px; color:var(--muted); margin:10px 0 6px;}
+    input[type="text"], textarea, select{
+      width:100%;
+      background:#0d141d;
+      border:1px solid #263548;
+      color:var(--ink);
+      border-radius:12px;
+      padding:10px 12px;
+      outline:none;
+      min-height:44px;
+    }
+    textarea{min-height: 90px; resize:vertical;}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      min-height:44px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid #263548;
+      background:#152233;
+      color:var(--ink);
+      cursor:pointer;
+      text-decoration:none;
+      user-select:none;
+      touch-action: manipulation;
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:#1a2e49;border-color:#2a446b}
+    .btn.danger{background:#2b1212;border-color:#5a1e1e}
+    .pill{
+      display:inline-flex; gap:8px; flex-wrap:wrap;
+      font-size:12px; color:var(--muted);
+    }
+    .pill span{
+      border:1px solid #263548;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#0d141d;
+    }
+    canvas{
+      width:100%;
+      height:auto;
+      border-radius:12px;
+      background:#000;
+      border:1px solid #1f2a37;
+    }
+    .small{font-size:12px;color:var(--muted);line-height:1.35}
+    .hr{border-top:1px solid #1f2a37; margin:12px 0;}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Cat News Anchor Studio</h1>
+        <div class="sub">
+          Upload your cat → pick a template → type headlines → export thumbnails + script pack.<br>
+          Designed to match the “bold yellow/white headline + red lower third” look.
+        </div>
+      </div>
+      <div class="pill">
+        <span>Client-side only</span>
+        <span>Mobile-friendly</span>
+        <span>PNG exports</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: controls -->
+      <div class="card">
+        <div class="row">
+          <button class="btn primary" id="btnRender">Render Preview</button>
+          <button class="btn" id="btnDownloadPNG">Download PNG</button>
+          <button class="btn" id="btnDownloadPack">Download Post Pack (TXT)</button>
+          <button class="btn danger" id="btnReset">Reset</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <label>1) Upload cat image (front face works best)</label>
+        <input type="file" id="catFile" accept="image/*"/>
+
+        <label>2) Format</label>
+        <select id="format">
+          <option value="landscape">Landscape (1280×720)</option>
+          <option value="vertical">Vertical (1080×1920)</option>
+        </select>
+
+        <label>3) Template</label>
+        <select id="template">
+          <option value="t1">Template 1 — “GENIUS ALERT” block</option>
+          <option value="t2">Template 2 — “ALL GONE” bubble + lower third</option>
+          <option value="t3">Template 3 — “NEW RULE, EH?” lower third heavy</option>
+          <option value="t4">Template 4 — “SO THIS IS THE PLAN, HUH?” desk style</option>
+        </select>
+
+        <label>4) Headline / Hook (big top text)</label>
+        <input type="text" id="headlineTop" value="GENIUS ALERT:"/>
+
+        <label>5) Subhead (big stacked text)</label>
+        <input type="text" id="headlineMain" value="OFFERS FREE ADVICE"/>
+
+        <label>6) Lower third (bottom strip text)</label>
+        <input type="text" id="lowerThird" value="IT'S GARBAGE"/>
+
+        <label>7) Optional small tag (top-right “platform icons”)</label>
+        <input type="text" id="platformTag" value="YT • TT • IG"/>
+
+        <label>8) “Satire lane” topic (paste today’s topic in 1 line)</label>
+        <input type="text" id="topic" value="Today's topic: Humans arguing online"/>
+
+        <label>9) Generate script/caption tone</label>
+        <select id="tone">
+          <option value="deadpan">Deadpan / dry</option>
+          <option value="playful">Playful / cute</option>
+          <option value="spicy">Spicy (still non-harassing)</option>
+        </select>
+
+        <div class="hr"></div>
+
+        <div class="small">
+          Notes:
+          <ul>
+            <li>For “daily news”: paste 1–2 headlines into “topic” and update text fields.</li>
+            <li>This avoids impersonating real people and avoids harassment. Keep it clearly satire.</li>
+            <li>If you later want auto-headline pulling, you’ll need a small proxy (CORS blocks many RSS feeds).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- RIGHT: preview + generated pack -->
+      <div class="card">
+        <canvas id="c"></canvas>
+
+        <div class="hr"></div>
+
+        <div class="row space">
+          <div class="small"><b>Generated script + caption pack (copy/paste)</b></div>
+          <button class="btn" id="btnCopyPack">Copy Pack</button>
+        </div>
+        <textarea id="pack" class="mono" readonly></textarea>
+
+        <div class="small">
+          Tip: The “post pack” is designed for Shorts/Reels: hook in first 1.5 seconds, punchlines every ~3 seconds.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    img: null,
+    imgReady: false,
+  };
+
+  // --- Canvas sizing
+  function setCanvasSize() {
+    const format = $("format").value;
+    const canvas = $("c");
+    if (format === "vertical") {
+      canvas.width = 1080;
+      canvas.height = 1920;
+    } else {
+      canvas.width = 1280;
+      canvas.height = 720;
+    }
+  }
+
+  // --- Load cat image
+  $("catFile").addEventListener("change", async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      state.img = img;
+      state.imgReady = true;
+      renderAll();
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => alert("Could not load that image. Try another.");
+    img.src = url;
+  });
+
+  // --- Helpers: draw with “YouTube thumbnail” style strokes
+  function drawTextBlock(ctx, text, x, y, maxWidth, options = {}) {
+    const {
+      font = "900 92px Impact, Haettenschweiler, 'Arial Black', sans-serif",
+      fill = "#ffffff",
+      stroke = "#000000",
+      strokeWidth = 14,
+      align = "left",
+      lineHeight = 1.05,
+      shadow = true
+    } = options;
+
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = align;
+    ctx.textBaseline = "top";
+
+    // wrap
+    const words = String(text).split(" ");
+    let line = "";
+    const lines = [];
+    for (const w of words) {
+      const test = line ? line + " " + w : w;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+
+    const sizeMatch = font.match(/(\d+)px/);
+    const fontSize = sizeMatch ? Number(sizeMatch[1]) : 72;
+    const lh = Math.floor(fontSize * lineHeight);
+
+    if (shadow) {
+      ctx.shadowColor = "rgba(0,0,0,0.55)";
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 8;
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const yy = y + i * lh;
+      ctx.lineJoin = "round";
+      ctx.miterLimit = 2;
+
+      ctx.lineWidth = strokeWidth;
+      ctx.strokeStyle = stroke;
+      ctx.strokeText(lines[i], x, yy);
+
+      ctx.fillStyle = fill;
+      ctx.fillText(lines[i], x, yy);
+    }
+
+    ctx.restore();
+    return y + lines.length * lh;
+  }
+
+  function drawLowerThird(ctx, w, h, text) {
+    // red gradient strip like your examples
+    const stripH = Math.round(h * 0.18);
+    const y = h - stripH;
+
+    const grad = ctx.createLinearGradient(0, y, 0, h);
+    grad.addColorStop(0, "#c61f1f");
+    grad.addColorStop(0.55, "#8d1414");
+    grad.addColorStop(1, "#540b0b");
+
+    ctx.save();
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y, w, stripH);
+
+    // top border highlight
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.fillRect(0, y, w, Math.max(4, Math.round(stripH * 0.06)));
+
+    // text
+    const pad = Math.round(w * 0.04);
+    drawTextBlock(ctx, text, pad, y + Math.round(stripH * 0.18), w - pad * 2, {
+      font: `900 ${Math.round(stripH * 0.42)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+      fill: "#ffffff",
+      stroke: "#000000",
+      strokeWidth: Math.round(stripH * 0.10),
+      align: "left",
+      lineHeight: 1.0,
+      shadow: false
+    });
+
+    ctx.restore();
+  }
+
+  function drawTagIcons(ctx, w, h, tag) {
+    // simple “platform pill” top right (avoid real logos)
+    const pad = Math.round(w * 0.03);
+    ctx.save();
+
+    const text = (tag || "").trim();
+    if (!text) return;
+
+    ctx.font = `800 ${Math.round(h * 0.035)}px system-ui, -apple-system, Segoe UI, Roboto`;
+    const tw = ctx.measureText(text).width;
+    const boxW = Math.round(tw + pad * 1.6);
+    const boxH = Math.round(h * 0.06);
+
+    const x = w - pad - boxW;
+    const y = pad;
+
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    roundRect(ctx, x, y, boxW, boxH, Math.round(boxH * 0.45), true, false);
+
+    ctx.fillStyle = "#e6edf3";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "center";
+    ctx.fillText(text, x + boxW / 2, y + boxH / 2);
+
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function drawBackdrop(ctx, w, h, template) {
+    // faux studio: dark blue + soft light + blurred shapes
+    ctx.save();
+    ctx.fillStyle = "#07101a";
+    ctx.fillRect(0, 0, w, h);
+
+    // gradient wash
+    const g = ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0, "rgba(25,50,90,0.55)");
+    g.addColorStop(0.55, "rgba(10,15,25,0.15)");
+    g.addColorStop(1, "rgba(80,10,10,0.20)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+
+    // “screen panels”
+    for (let i=0;i<3;i++){
+      ctx.fillStyle = `rgba(255,255,255,${0.06 - i*0.01})`;
+      const px = Math.round(w*(0.12 + i*0.22));
+      const py = Math.round(h*(0.18 + i*0.06));
+      const pw = Math.round(w*(0.30));
+      const ph = Math.round(h*(0.22));
+      roundRect(ctx, px, py, pw, ph, 18, true, false);
+    }
+
+    // vignette
+    const vg = ctx.createRadialGradient(w*0.5,h*0.45,Math.min(w,h)*0.15, w*0.5,h*0.5, Math.max(w,h)*0.75);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,w,h);
+
+    ctx.restore();
+  }
+
+  function drawCat(ctx, w, h, template) {
+    if (!state.imgReady) {
+      // placeholder
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      roundRect(ctx, Math.round(w*0.55), Math.round(h*0.18), Math.round(w*0.38), Math.round(h*0.64), 18, true, false);
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.font = `700 ${Math.round(h*0.04)}px system-ui`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Upload cat image", Math.round(w*0.74), Math.round(h*0.50));
+      ctx.restore();
+      return;
+    }
+
+    // Place cat similar to examples: right side, large face
+    const img = state.img;
+    ctx.save();
+
+    // Cropping math to “center face” (simple center crop)
+    const targetW = Math.round(w * (template === "t1" ? 0.42 : 0.46));
+    const targetH = Math.round(h * (template === "vertical" ? 0.55 : 0.70));
+
+    // For our templates we’ll do a big right-side portrait
+    const boxW = Math.round(w * 0.46);
+    const boxH = Math.round(h * 0.72);
+    const x = Math.round(w * 0.52);
+    const y = Math.round(h * 0.12);
+
+    // subtle shadow behind cat
+    ctx.shadowColor = "rgba(0,0,0,0.65)";
+    ctx.shadowBlur = 30;
+    ctx.shadowOffsetY = 18;
+
+    // Draw image “cover” into the box
+    drawImageCover(ctx, img, x, y, boxW, boxH);
+
+    ctx.restore();
+
+    // add fake suit collar / tie block (simple shapes)
+    ctx.save();
+    const sx = x + Math.round(boxW*0.18);
+    const sy = y + Math.round(boxH*0.60);
+    const sw = Math.round(boxW*0.64);
+    const sh = Math.round(boxH*0.34);
+
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    roundRect(ctx, sx, sy, sw, sh, 22, true, false);
+
+    // tie
+    ctx.fillStyle = "rgba(20,80,170,0.85)";
+    const tx = sx + Math.round(sw*0.46);
+    const ty = sy + Math.round(sh*0.10);
+    roundRect(ctx, tx, ty, Math.round(sw*0.10), Math.round(sh*0.75), 14, true, false);
+
+    ctx.restore();
+
+    // “NEWS mic” vibe (simple label)
+    ctx.save();
+    const mx = x + Math.round(boxW*0.06);
+    const my = y + Math.round(boxH*0.62);
+    const mw = Math.round(boxW*0.22);
+    const mh = Math.round(boxH*0.10);
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    roundRect(ctx, mx, my, mw, mh, 14, true, false);
+    drawTextBlock(ctx, "NEWS", mx + Math.round(mw*0.12), my + Math.round(mh*0.20), mw, {
+      font: `900 ${Math.round(mh*0.55)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+      fill: "#7fd3ff",
+      stroke: "#000000",
+      strokeWidth: Math.round(mh*0.20),
+      align: "left",
+      lineHeight: 1.0,
+      shadow: false
+    });
+    ctx.restore();
+  }
+
+  function drawImageCover(ctx, img, x, y, w, h) {
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const ir = iw / ih;
+    const tr = w / h;
+
+    let sx, sy, sw, sh;
+    if (ir > tr) {
+      // crop sides
+      sh = ih;
+      sw = ih * tr;
+      sx = (iw - sw) / 2;
+      sy = 0;
+    } else {
+      // crop top/bottom
+      sw = iw;
+      sh = iw / tr;
+      sx = 0;
+      sy = (ih - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function renderThumb() {
+    setCanvasSize();
+    const canvas = $("c");
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const template = $("template").value;
+
+    // backdrop
+    drawBackdrop(ctx, w, h, template);
+
+    // cat
+    drawCat(ctx, w, h, template);
+
+    // text layout per template
+    const top = ($("headlineTop").value || "").trim();
+    const main = ($("headlineMain").value || "").trim();
+    const lower = ($("lowerThird").value || "").trim();
+    const tag = ($("platformTag").value || "").trim();
+
+    if (template === "t1") {
+      // left stacked block like “GENIUS ALERT: OFFERS FREE ADVICE”
+      const pad = Math.round(w * 0.04);
+      const blockW = Math.round(w * 0.46);
+
+      // top yellow
+      drawTextBlock(ctx, top, pad, Math.round(h*0.14), blockW, {
+        font: `900 ${Math.round(h*0.16)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+        fill: "#ffd400",
+        stroke: "#000000",
+        strokeWidth: Math.round(h*0.030),
+        lineHeight: 0.92
+      });
+
+      // main white
+      drawTextBlock(ctx, main, pad, Math.round(h*0.34), blockW, {
+        font: `900 ${Math.round(h*0.14)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+        fill: "#ffffff",
+        stroke: "#000000",
+        strokeWidth: Math.round(h*0.028),
+        lineHeight: 0.92
+      });
+
+      // small red badge bottom-left
+      if (lower) {
+        ctx.save();
+        const bx = pad;
+        const by = Math.round(h*0.72);
+        const bw = Math.round(blockW * 0.86);
+        const bh = Math.round(h*0.14);
+        const grad = ctx.createLinearGradient(bx, by, bx, by+bh);
+        grad.addColorStop(0, "#d43a3a");
+        grad.addColorStop(1, "#7a0f0f");
+        ctx.fillStyle = grad;
+        roundRect(ctx, bx, by, bw, bh, 18, true, false);
+
+        drawTextBlock(ctx, lower, bx + Math.round(bw*0.07), by + Math.round(bh*0.22), bw - 20, {
+          font: `900 ${Math.round(bh*0.55)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+          fill: "#ffffff",
+          stroke: "#000000",
+          strokeWidth: Math.round(bh*0.18),
+          lineHeight: 1.0,
+          shadow: false
+        });
+        ctx.restore();
+      }
+
+    } else if (template === "t2") {
+      // speech bubble style + red lower third
+      const pad = Math.round(w*0.04);
+      // bubble
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.60)";
+      const bx = pad;
+      const by = Math.round(h*0.10);
+      const bw = Math.round(w*0.48);
+      const bh = Math.round(h*0.18);
+      roundRect(ctx, bx, by, bw, bh, 18, true, false);
+      drawTextBlock(ctx, top || "ALL GONE", bx + Math.round(bw*0.08), by + Math.round(bh*0.22), bw - pad, {
+        font: `900 ${Math.round(bh*0.60)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+        fill: "#ffd400",
+        stroke: "#000000",
+        strokeWidth: Math.round(bh*0.18),
+        lineHeight: 0.95,
+        shadow: false
+      });
+      ctx.restore();
+
+      if (lower) drawLowerThird(ctx, w, h, lower);
+
+    } else if (template === "t3") {
+      // big lower third, smaller left title
+      const pad = Math.round(w*0.04);
+      drawTextBlock(ctx, top || "NEW RULE, EH?", pad, Math.round(h*0.64), Math.round(w*0.48), {
+        font: `900 ${Math.round(h*0.11)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+        fill: "#ffd400",
+        stroke: "#000000",
+        strokeWidth: Math.round(h*0.022),
+        lineHeight: 0.95
+      });
+      if (lower) drawLowerThird(ctx, w, h, lower);
+
+    } else if (template === "t4") {
+      // big white headline left, desk vibe + prices in lower strip
+      const pad = Math.round(w*0.04);
+      drawTextBlock(ctx, (top || "SO THIS IS").toUpperCase(), pad, Math.round(h*0.10), Math.round(w*0.52), {
+        font: `900 ${Math.round(h*0.13)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+        fill: "#ffffff",
+        stroke: "#000000",
+        strokeWidth: Math.round(h*0.022),
+        lineHeight: 0.92
+      });
+      drawTextBlock(ctx, (main || "THE PLAN, HUH?").toUpperCase(), pad, Math.round(h*0.24), Math.round(w*0.52), {
+        font: `900 ${Math.round(h*0.13)}px Impact, Haettenschweiler, 'Arial Black', sans-serif`,
+        fill: "#ffffff",
+        stroke: "#000000",
+        strokeWidth: Math.round(h*0.022),
+        lineHeight: 0.92
+      });
+      if (lower) drawLowerThird(ctx, w, h, lower);
+    }
+
+    drawTagIcons(ctx, w, h, tag);
+  }
+
+  // --- Script pack generation (safe satire / cute)
+  function generatePack() {
+    const day = new Date().toLocaleDateString();
+    const topic = ($("topic").value || "").trim();
+    const tone = $("tone").value;
+
+    const top = ($("headlineTop").value || "").trim();
+    const main = ($("headlineMain").value || "").trim();
+    const lower = ($("lowerThird").value || "").trim();
+
+    const persona = {
+      deadpan: {
+        hook: "Breaking news: humans did it again. Shocking.",
+        tag: "Deadpan mode.",
+        close: "Follow for tomorrow's report. I rest my paw."
+      },
+      playful: {
+        hook: "Meow-ning. It's time for Cat News.",
+        tag: "Cute-but-true mode.",
+        close: "Follow for tomorrow. Treats are my consulting fee."
+      },
+      spicy: {
+        hook: "Welcome back. Today's headline? Absolute clown behavior.",
+        tag: "Spicy, not cruel.",
+        close: "Follow for tomorrow. I'm charging emotional rent."
+      }
+    }[tone];
+
+    // Keep satire broad: target behaviors/systems, not private people
+    const script =
+`CAT NEWS ANCHOR — ${day}
+
+ON-SCREEN THUMB TEXT:
+TOP: ${top}
+MAIN: ${main}
+LOWER: ${lower}
+
+TOPIC INPUT:
+${topic}
+
+SCRIPT (30–35s, satire-safe):
+0.0–1.5s HOOK:
+${persona.hook}
+
+1.5–10s STORY 1 (broad roast):
+"So here's the thing: everyone has an opinion, nobody has a plan."
+"If confidence burned calories, we'd solve the energy crisis by lunch."
+
+10–20s STORY 2 (systems/behavior, not individuals):
+"Remember: if it's designed to make you angry, it's working."
+"Meanwhile I'm over here with a perfect policy: nap, snack, repeat."
+
+20–28s CUTE BEAT:
+"Now for cat business: I asked for treats and got told to 'budget.'"
+"Budget? I sleep 16 hours a day and still contribute more."
+
+28–35s CLOSE:
+${persona.close}
+
+EDIT NOTES:
+- Cut every 1–2 seconds (zoom/reframe/headline card)
+- Burn subtitles big (center-safe)
+- Keep it clearly satire; avoid naming private individuals
+`;
+
+    const caption =
+`${top} ${main}
+${persona.tag} ${topic}
+
+Follow for daily Cat News + cute chaos.
+#cat #cats #catsoftiktok #catvideos #funny #satire #shorts #reels #pets`;
+
+    const hashtags =
+`#cat #cats #catnews #funnycat #petvideos #shorts #reels #tiktokcats #catmemes #satire`;
+
+    $("pack").value = script + "\n\nCAPTION:\n" + caption + "\n\nHASHTAGS:\n" + hashtags;
+  }
+
+  function renderAll() {
+    renderThumb();
+    generatePack();
+  }
+
+  // --- Events
+  $("btnRender").onclick = renderAll;
+  $("format").onchange = renderAll;
+  $("template").onchange = renderAll;
+
+  ["headlineTop","headlineMain","lowerThird","platformTag","topic","tone"].forEach(id=>{
+    $(id).addEventListener("input", () => { renderAll(); });
+  });
+
+  $("btnDownloadPNG").onclick = () => {
+    renderThumb();
+    const canvas = $("c");
+    const a = document.createElement("a");
+    const t = $("template").value;
+    const f = $("format").value;
+    a.download = `catnews_${f}_${t}.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  };
+
+  $("btnDownloadPack").onclick = () => {
+    generatePack();
+    const blob = new Blob([$("pack").value], {type:"text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.download = "catnews_post_pack.txt";
+    a.href = url;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  };
+
+  $("btnCopyPack").onclick = async () => {
+    try{
+      await navigator.clipboard.writeText($("pack").value || "");
+      $("btnCopyPack").textContent = "Copied";
+      setTimeout(()=>$("btnCopyPack").textContent = "Copy Pack", 900);
+    }catch(e){
+      alert("Copy failed. Long-press inside the pack and copy manually.");
+    }
+  };
+
+  $("btnReset").onclick = () => {
+    $("headlineTop").value = "GENIUS ALERT:";
+    $("headlineMain").value = "OFFERS FREE ADVICE";
+    $("lowerThird").value = "IT'S GARBAGE";
+    $("platformTag").value = "YT • TT • IG";
+    $("topic").value = "Today's topic: Humans arguing online";
+    $("tone").value = "deadpan";
+    renderAll();
+  };
+
+  // initial render
+  renderAll();
+})();
+</script>
+</body>
+</html>
